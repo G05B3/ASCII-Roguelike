@@ -12,6 +12,7 @@ int getEnemyX(enemy* e);
 int getEnemyY(enemy* e);
 int getEnemyChr(enemy* e);
 int getEnemyHp(enemy* e);
+int getEnemyMaxHp(enemy* e);
 int getEnemyAtk(enemy* e);
 int getEnemyExp(enemy* e);
 void incrEnemyX(enemy* e);
@@ -33,6 +34,7 @@ enemyLibrary* getDefaultEnemyLibrary();
 void deleteEnemyLibrary(enemyLibrary* el);
 int getEnemyLibrarySize(enemyLibrary* el);
 enemy* getEnemyFromLibrary(enemyLibrary* el, int index);
+enemy* getEnemyByNameFromLibrary(enemyLibrary* el, char* name);
 enemy* getBossFromLibrary(enemyLibrary* el, int index);
 enemy* getBossByFloorFromLibrary(enemyLibrary* el, int floor);
 

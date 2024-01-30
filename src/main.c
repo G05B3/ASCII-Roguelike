@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
     enemyLibrary* el;
     el = getDefaultEnemyLibrary();
 
-    exploreDungeon(p, wl, el, sw, sh, bw, bh, 10);
+    exploreDungeon(p, wl, el, sw, sh, bw, bh, 20);
 
     deletePlayer(p); 
     deleteWeaponLibrary(wl);

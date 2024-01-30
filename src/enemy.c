@@ -192,15 +192,15 @@ enemyLibrary* getDefaultEnemyLibrary(){
     enemyLibrary* el = (enemyLibrary*)malloc(sizeof(enemyLibrary));
     if (el == NULL)
         return NULL;
-    el->num = 5;
-    el->next = 5;
+    el->num = 10;
+    el->next = 10;
     el->enemies = (enemy**)malloc(el->num * sizeof(enemy*));
         if (el->enemies == NULL){
             free(el);
             return NULL;
         }
-    el->numbosses = 1;
-    el->nextboss = 1;
+    el->numbosses = 2;
+    el->nextboss = 2;
     el->bosses = (enemy**)malloc(el->numbosses * sizeof(enemy*));
         if (el->bosses == NULL){
             free(el->enemies);
@@ -215,17 +215,34 @@ enemyLibrary* getDefaultEnemyLibrary(){
     el->enemies[1] = initEnemy("Goblin", 'G', 2, 22, 9, 9);
 
     // Enemy[2]
-    el->enemies[2] = initEnemy("Big Rat", 'R', 4, 30, 15, 16);
+    el->enemies[2] = initEnemy("Rat", 'R', 4, 30, 15, 16);
 
     // Enemy[3]
-    el->enemies[3] = initEnemy("Giant Crab", 'C', 6, 80, 20, 33);
+    el->enemies[3] = initEnemy("Crab", 'C', 6, 80, 20, 33);
 
     // Enemy[4]
     el->enemies[4] = initEnemy("Kobold", 'K', 8, 100, 25, 75);
 
-    // Boss
+    // Enemy[5]
+    el->enemies[5] = initEnemy("Orc", 'O', 11, 150, 30, 100);
+
+    // Enemy[6]
+    el->enemies[6] = initEnemy("Viper", 'V', 13, 100, 50, 175);
+
+    // Enemy[7]
+    el->enemies[7] = initEnemy("Hobgoblin", 'H', 16, 90, 18, 22);
+
+    // Enemy[8]
+    el->enemies[8] = initEnemy("Lizard", 'L', 17, 200, 40, 210);
+
+    // Enemy[9]
+    el->enemies[9] = initEnemy("Ice Mnstr", 'I', 21, 300, 50, 320);
+
+    // Boss[0]
     el->bosses[0] = initEnemy("Mega Slime", 'M', 10, 400, 15, 1000);
     
+    // Boss[1]
+    el->bosses[1] = initEnemy("Minotaur", 'T', 20, 600, 35, 4000);
 
     return el;
 }

@@ -22,7 +22,7 @@
 #define DISPTRIR "╣"
 #define DISPTRIL "╠"
 #define DISPLEN 38
-#define DISPHGT 19
+#define DISPHGT 24
 
 struct _player{
     int x;
@@ -46,6 +46,7 @@ struct _player{
 struct _weapon{
     char name[20];
     int power;
+    int floor;
 };
 
 struct _weaponLibrary{
@@ -151,6 +152,10 @@ int getPlayerPotions(player* p){
     return p->potions;
 }
 
+int getPlayerGld(player* p){
+    return p->gld;
+}
+
 void healPlayer(player* p, int heal_amount){
     p->hp+=heal_amount;
     if (p->hp > p->max_hp)
@@ -226,9 +231,10 @@ void playerLevelUp(player* p){
 void updatePlayerExp(player* p, int exp){
     int pp = powi(2, p->level - 1) * 10;
     p->exp += exp;
-    if (p->exp > pp){
+    while (p->exp > pp){
         p->exp -= pp;
         p->level++;
+        pp = powi(2, p->level - 1) * 10;
         playerLevelUp(p);
     }
     p_updateLevelExp(p);
@@ -334,7 +340,47 @@ void p_textBox2(player* p, char* line1, char* line2){
         gotoxy(start_x + 2, start_y + 18);
         printf("%s", l2);
     }
+}
 
+void p_textBox3(player* p, char* line1, char* line2, int mode){
+    int i, start_x = p->dispx, start_y = p->dispy;
+    char l1[DISPLEN - 2], l2[DISPLEN - 2];
+    if (line1 != NULL){
+        strncpy(l1, line1, DISPLEN - 3);
+        l1[DISPLEN - 3] = '\0';
+    } else strcpy(l1,"\0");
+    if (line2 != NULL){
+        strncpy(l2, line2, DISPLEN - 3);
+        l2[DISPLEN - 3] = '\0';
+    } else strcpy(l2,"\0");
+
+    gotoxy(start_x + 1, start_y + 21);
+    for (i = 0; i < DISPLEN - 1; i++)
+        printf(" ");
+    if (strcmp(l1,"\0") != 0){
+        gotoxy(start_x + 2, start_y + 21);
+        printf("%s", l1);
+    }
+    gotoxy(start_x + 1, start_y + 22);
+    for (i = 0; i < DISPLEN - 1; i++)
+        printf(" ");
+    if (strcmp(l2,"\0") != 0){
+        gotoxy(start_x + 2, start_y + 22);
+        printf("%s", l2);
+    }
+    if (mode == 1){
+        gotoxy(start_x + 2, start_y + 23);
+        printf("Your asnwer[y/n]: ");
+    }
+}
+
+void p_cleanTBox3(player* p){
+    int i, j, start_x = p->dispx, start_y = p->dispy;
+    for (i = 0; i < 3; i++){
+        gotoxy(start_x + 1, start_y + 21 + i);
+        for (j = 0; j < DISPLEN - 1; j++)
+            printf(" ");
+    }
 }
 
 void p_display(player* p){
@@ -364,6 +410,12 @@ void p_display(player* p){
         printf("%s", DISPHOR);
     printf("%s", DISPTRIR);
 
+    gotoxy(start_x, start_y + 19);
+    printf("%s", DISPTRIL);
+    for (i = 0; i < DISPLEN; i++)
+        printf("%s", DISPHOR);
+    printf("%s", DISPTRIR);
+
     gotoxy(start_x, start_y + DISPHGT);
     printf("%s", DISPCORNSW);
     for (i = 0; i < DISPLEN; i++)
@@ -383,16 +435,19 @@ void p_display(player* p){
     // display log
     p_textBox(p, NULL, NULL);
 
+    gotoxy(start_x + 2, start_y + 20);
+    printf("Market: ");
 }
 
 
 
-weapon* createWeapon(char* name, int power){
+weapon* createWeapon(char* name, int power, int floor){
     weapon* new = (weapon*)malloc(sizeof(weapon));
     if (new == NULL)
         return NULL;
     strncpy(new->name, name, 20);
     new->power = power;
+    new->floor = floor;
     return new;
 }
 
@@ -404,25 +459,33 @@ int getWeaponPower(weapon* w){
     return w->power;
 }
 
+int getWeaponFloor(weapon* w){
+    return w->floor;
+}
+
+char* getWeaponName(weapon* w){
+    return w->name;
+}
+
 weaponLibrary* getDefaultWeaponLibrary(){
     weaponLibrary* weapon_arr = (weaponLibrary*)malloc(sizeof(weaponLibrary));
     weapon_arr->nweapons = 5; // array of 5 weapons
     weapon_arr->weapons = (weapon**)malloc(weapon_arr->nweapons * sizeof(weapon*));
 
     // Weapon[0]
-    weapon_arr->weapons[0] = createWeapon("Sturdy Stick", 3);
+    weapon_arr->weapons[0] = createWeapon("Sturdy Stick", 3, 1);
 
     // Weapon[1]
-    weapon_arr->weapons[1] = createWeapon("Wood Sword", 5);
+    weapon_arr->weapons[1] = createWeapon("Wood Sword", 5, 2);
 
     // Weapon[2]
-    weapon_arr->weapons[2] = createWeapon("Jagged Blade", 12);
+    weapon_arr->weapons[2] = createWeapon("Jagged Blade", 12, 4);
 
     // Weapon[3]
-    weapon_arr->weapons[3] = createWeapon("Paladin's Sword", 25);
+    weapon_arr->weapons[3] = createWeapon("Paladin's Sword", 25, 6);
 
     // Weapon[4]
-    weapon_arr->weapons[4] = createWeapon("Dual Great Blades", 40);
+    weapon_arr->weapons[4] = createWeapon("Dual Great Blades", 40, 8);
 
     return weapon_arr;
 }
@@ -446,4 +509,13 @@ weapon* getWeaponFromLibrary(weaponLibrary* wl, int index){
 
 int getWeaponLibrarySize(weaponLibrary* wl){
     return wl->nweapons;
+}
+
+weapon* searchWeaponbyFloor(weaponLibrary* wl, int floor, int high_low){
+    int i;
+    for (i = 0; i < wl->nweapons; i++){
+        if (wl->weapons[i]->floor <= floor && high_low == 0 || wl->weapons[i]->floor >= floor && high_low == 1)
+            return wl->weapons[i];
+    }
+    return NULL;
 }

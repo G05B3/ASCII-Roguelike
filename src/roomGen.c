@@ -16,6 +16,7 @@ struct _room{
     int goldNum;
     int goldDen;
     int goldAmount;
+    int pattern;
 };
 
 /**
@@ -277,6 +278,8 @@ void roomPatternGen(room* r, int forcepattern){
     
     if (forcepattern != -1)
         pattern = forcepattern;
+    
+    r->pattern = pattern;
 
     if (pattern == 0) // pattern[0]: empty room
         return;
@@ -316,6 +319,86 @@ void roomPatternGen(room* r, int forcepattern){
             r->mat[r->height/2][r->width/2 - 1] = WALL;
         }
         return;
+    }
+}
+
+int getRoomPattern(room* r){
+    return r->pattern;
+}
+
+void setRoomDoor(room* r, int dir){
+    int i, j;
+    i = r->width/2;
+    j = r->height/2;
+    // Create Forced North Door
+    if (dir == NORTH){
+        r->mat[0][i] = WALL;
+        if (i + 1 < r->width && i > 0){
+            r->mat[0][i+1] = WALL;
+            r->mat[0][i-1] = WALL;
+        }
+    }
+    // Create Forced East Door
+    else if (dir == EAST){
+        r->mat[j][r->width - 1] = WALL;
+        if (j + 1 < r->height && j > 0){
+            r->mat[j+1][r->width - 1] = WALL;
+            r->mat[j-1][r->width - 1] = WALL;
+        }
+    }
+    // Create Forced SOUTH Door
+    else if (dir == SOUTH){
+        r->mat[r->height - 1][i] = WALL;
+        if (i + 1 < r->width && i > 0){
+            r->mat[r->height - 1][i+1] = WALL;
+            r->mat[r->height - 1][i-1] = WALL;
+        }
+    }
+    // Create Forced West Door
+    else if (dir == WEST){
+        r->mat[j][0] = WALL;
+        if (j + 1 < r->height && j > 0){
+            r->mat[j+1][0] = WALL;
+            r->mat[j-1][0] = WALL;
+        }
+    }
+}
+
+void openRoomDoor(room* r, int dir){
+    int i, j;
+    i = r->width/2;
+    j = r->height/2;
+    // Create Forced North Door
+    if (dir == NORTH){
+        r->mat[0][i] = FLOOR;
+        if (i + 1 < r->width && i > 0){
+            r->mat[0][i+1] = FLOOR;
+            r->mat[0][i-1] = FLOOR;
+        }
+    }
+    // Create Forced East Door
+    else if (dir == EAST){
+        r->mat[j][r->width - 1] = FLOOR;
+        if (j + 1 < r->height && j > 0){
+            r->mat[j+1][r->width - 1] = FLOOR;
+            r->mat[j-1][r->width - 1] = FLOOR;
+        }
+    }
+    // Create Forced SOUTH Door
+    else if (dir == SOUTH){
+        r->mat[r->height - 1][i] = FLOOR;
+        if (i + 1 < r->width && i > 0){
+            r->mat[r->height - 1][i+1] = FLOOR;
+            r->mat[r->height - 1][i-1] = FLOOR;
+        }
+    }
+    // Create Forced West Door
+    else if (dir == WEST){
+        r->mat[j][0] = FLOOR;
+        if (j + 1 < r->height && j > 0){
+            r->mat[j+1][0] = FLOOR;
+            r->mat[j-1][0] = FLOOR;
+        }
     }
 }
 
@@ -460,7 +543,7 @@ void printRoom(room* r, int start_x, int start_y, int offset_x, int offset_y){
             if (r->mat[i][j] == GOLD || r->mat[i][j] == CHEST)
                 printf("\033[33m");
             else if (r->mat[i][j] == EXIT)
-                printf("\033[36m");
+                printf("\033[1;36m");
             printf("%c\033[0m ", r->mat[i][j]);
         }
         gotoxy(2*start_x - offset_x, start_y + i + 1);

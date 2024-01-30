@@ -11,6 +11,7 @@ struct _enemy{
     int floor;
     char name[20];
     int hp;
+    int maxhp;
     int atk;
     int exp;
 };
@@ -33,6 +34,7 @@ enemy* initEnemy(char* name, int chr, int floor, int hp, int atk, int exp){
     new->chr = chr;
     new->floor = floor;
     new->hp = hp;
+    new->maxhp = hp;
     new->atk = atk;
     new->x = 0;
     new->y = 0;
@@ -68,6 +70,10 @@ int getEnemyChr(enemy* e){
 
 int getEnemyHp(enemy* e){
     return e->hp;
+}
+
+int getEnemyMaxHp(enemy* e){
+    return e->maxhp;
 }
 
 int getEnemyAtk(enemy* e){
@@ -218,7 +224,8 @@ enemyLibrary* getDefaultEnemyLibrary(){
     el->enemies[4] = initEnemy("Kobold", 'K', 8, 100, 25, 75);
 
     // Boss
-    el->bosses[0] = initEnemy("Mega Slime", 'M', 10, 800, 50, 1024);
+    el->bosses[0] = initEnemy("Mega Slime", 'M', 10, 400, 15, 1000);
+    
 
     return el;
 }
@@ -243,6 +250,16 @@ int getEnemyLibrarySize(enemyLibrary* el){
 
 enemy* getEnemyFromLibrary(enemyLibrary* el, int index){
     return el->enemies[index];
+}
+
+enemy* getEnemyByNameFromLibrary(enemyLibrary* el, char* name){
+    int i;
+    for(i = 0; i < el->num; i++){
+        if (!strcmp(el->enemies[i]->name, name)){
+            return el->enemies[i];
+        }
+    }
+    return NULL;
 }
 
 enemy* getBossFromLibrary(enemyLibrary* el, int index){

@@ -8,6 +8,7 @@
 #include "stack.h"
 #include "player.h"
 #include "enemy.h"
+#include "merchant.h"
 
 #define DEFAULTPOTIONHEAL 30
 
@@ -28,6 +29,7 @@ struct _roomp{
     roomp* west;
     enemyp** room_enemies;
     int num_enemies;
+    merchant* merch;
 };
 
 
@@ -48,6 +50,15 @@ void deleteEnemyPlus(enemyp* ep){
     free(ep);
 }
 
+int noMerchInTile(roomp* rp, int x, int y){
+    int i;
+    if (rp->merch == NULL)
+        return 1;
+    if (getMerchX(rp->merch) == x && getMerchY(rp->merch) == y) // merch coordinates are the same as target tile
+        return 0;
+    return 1;
+}
+
 int noEnemyInTile(roomp* rp, int x, int y){
     int i;
     for (i = 0; i < rp->num_enemies; i++)
@@ -60,19 +71,23 @@ int playerMove(player *p, roomp* rp){
     int mov = getch();
     if ((mov == 'd' || mov == 'D') && (getPlayerX(p) - rp->x < getRoomWidth(rp->r) - 1)
     && getRoomTile(rp->r, getPlayerX(p) + 1 - rp->x, getPlayerY(p) - rp->y) != WALL
-    && noEnemyInTile(rp, getPlayerX(p) + 1, getPlayerY(p)) == 1)
+    && noEnemyInTile(rp, getPlayerX(p) + 1, getPlayerY(p)) == 1
+    && noMerchInTile(rp, getPlayerX(p) + 1, getPlayerY(p)) == 1)
         incrPlayerX(p);
     else if ((mov == 'a' || mov == 'A') && (getPlayerX(p) - rp->x > 0)
     && getRoomTile(rp->r, getPlayerX(p) - 1 - rp->x, getPlayerY(p) - rp->y) != WALL
-    && noEnemyInTile(rp, getPlayerX(p) - 1, getPlayerY(p)) == 1)
+    && noEnemyInTile(rp, getPlayerX(p) - 1, getPlayerY(p)) == 1
+    && noMerchInTile(rp, getPlayerX(p) - 1, getPlayerY(p)) == 1)
         decrPlayerX(p);
     else if ((mov == 's' || mov == 'S') && (getPlayerY(p) - rp->y < getRoomHeight(rp->r) - 1)
     && getRoomTile(rp->r, getPlayerX(p) - rp->x, getPlayerY(p) + 1 - rp->y) != WALL
-    && noEnemyInTile(rp, getPlayerX(p), getPlayerY(p) + 1) == 1)
+    && noEnemyInTile(rp, getPlayerX(p), getPlayerY(p) + 1) == 1
+    && noMerchInTile(rp, getPlayerX(p), getPlayerY(p) + 1) == 1)
         incrPlayerY(p);
     else if ((mov == 'w' || mov == 'W') && (getPlayerY(p) - rp->y > 0)
     && getRoomTile(rp->r, getPlayerX(p) - rp->x, getPlayerY(p) - 1 - rp->y) != WALL
-    && noEnemyInTile(rp, getPlayerX(p), getPlayerY(p) - 1) == 1)
+    && noEnemyInTile(rp, getPlayerX(p), getPlayerY(p) - 1) == 1
+    && noMerchInTile(rp, getPlayerX(p), getPlayerY(p) - 1) == 1)
         decrPlayerY(p);
     else if ((mov == 'e' || mov == 'E') && getPlayerPotions(p) > 0){
         healPlayer(p, DEFAULTPOTIONHEAL);
@@ -126,9 +141,20 @@ int playerAttacks(player* p, roomp* rp, int action){
     return -1; // player does not attack
 }
 
-void playerInteract(player* p, roomp* rp, weaponLibrary* wl, int mov){
+int playerTalks(player* p, roomp* rp, int action){
+    if ((action == 't' || action == 'T')
+    && (!noMerchInTile(rp, getPlayerX(p) + 1, getPlayerY(p))
+    || !noMerchInTile(rp, getPlayerX(p) - 1, getPlayerY(p))
+    || !noMerchInTile(rp, getPlayerX(p), getPlayerY(p) + 1)
+    || !noMerchInTile(rp, getPlayerX(p), getPlayerY(p) - 1))){
+        return 1;
+    }
+    return 0;
+}
+
+void playerInteract(player* p, roomp* rp, weaponLibrary* wl, int mov, int floor){
     int x = getPlayerX(p) - rp->x, y = getPlayerY(p) - rp->y, tile = getRoomTile(rp->r, x, y), trstype = getRoomTrsType(rp->r, x, y);
-    int dmg, outcome;
+    int dmg, outcome, trade;
     char l1[28], l2[28], aux[5];
     enemy* e_target;
 
@@ -204,6 +230,66 @@ void playerInteract(player* p, roomp* rp, weaponLibrary* wl, int mov){
         }
     }
 
+    // Merchant Interactions
+    if (playerTalks(p, rp, mov) && !isTradeLocked(rp->merch)){
+        char l1[40], l2[40], aux[5];
+        strncpy(l1, "Greetings. I sell ",19);
+        if (getMerchType(rp->merch) == POTIONS){
+            if (getMerchAmount(rp->merch) > 1)
+                strcat(l1,"potions");
+            else
+                strcat(l1,"a potion");
+        }
+        else if (getMerchType(rp->merch) == WEAPONS){
+            strcat(l1,"a ");
+            strcat(l1,getWeaponName(searchWeaponbyFloor(wl, floor, 1)));
+        }
+        strncpy(l2,"for ",5);
+        sprintf(aux,"%d",getMerchValue(rp->merch));
+        strcat(l2,aux);
+        strcat(l2,"G.");
+
+        do{
+            p_cleanTBox3(p);
+            p_textBox3(p,l1,l2, 1);
+            trade = getchar(); // player chooses (y/n)
+        }while(trade != 'y' && trade != 'n');
+        p_cleanTBox3(p);
+        if (trade == 'n'){
+            sprintf(l1,"Ok...");
+            l2[0] = '\0';
+            p_textBox3(p, l1, l2, 0);
+        }
+        else if (trade == 'y'){
+            if(getPlayerGld(p) < getMerchValue(rp->merch)){ // not enough G
+                sprintf(l1,"Not enough G...");
+                l2[0] = '\0';
+                p_textBox3(p, l1, l2, 0);
+            }
+            else{ // do trade
+                sell(rp->merch);
+                addPlayerG(p, getMerchValue(rp->merch) * -1);
+                if (getMerchType(rp->merch) == POTIONS)
+                    updatePlayerPotions(p, 1);
+                else if (getMerchType(rp->merch) == WEAPONS)
+                    updatePlayerWeapon(p, getMerchGoods(rp->merch));
+                sprintf(l1, "Pleasure doing business");
+                sprintf(l2, "with you!");
+                p_textBox3(p, l1, l2, 0);
+                p_updateDispStats(p);
+            }
+        }
+        getch();
+    }
+    else if (playerTalks(p, rp, mov) && isTradeLocked(rp->merch)){ // merchant is trade locked
+        p_cleanTBox3(p);
+        sprintf(l1,"I have nothing else");
+        sprintf(l2,"to sell to you.");
+        p_textBox3(p, l1, l2, 0);
+
+    }else{
+        p_cleanTBox3(p);
+    }
 }
 
 int shouldChangeRoom(player* p, roomp* rp, int mov){
@@ -215,7 +301,7 @@ int shouldChangeRoom(player* p, roomp* rp, int mov){
     return 0;
 }
 
-roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe){
+roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe, weaponLibrary* wl){
 
     // Create the room
     room *r = roomBuild(w, h, ndoors, fdoor, bdoors, fp, fe);
@@ -235,21 +321,24 @@ roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdo
     new->west = NULL;
     new->room_enemies = NULL;
     new->num_enemies = 0;
+    new->merch = NULL;
 
     if (el == NULL)
         return new;
 
     // Initialize Array of Enemies in the Room
-    int i, j, size, tiles = getEmptyRoomTiles(new->r), *arr = getEmptyRoomTileArr(new->r);
+    int i, j, k, num, price, amount, size, tiles = getEmptyRoomTiles(new->r), *arr = getEmptyRoomTileArr(new->r);
+    Item itm;
+
     size = rand()%200 + 1;
     for (i = 100, j = 0; i >= 1; i/=2, j++){ // number of enemies to spawn
-        if (size > i){
+        if (size >= i){
             size = j;
             break;
         }
     }
     if (size > tiles)
-        size = tiles;
+        size = tiles - 1;
     new->room_enemies = (enemyp**)malloc(size * sizeof(enemyp*)); // Array of enemy plus's of size [size] (at most 2 enemies)
     new->num_enemies = size;
 
@@ -259,10 +348,45 @@ roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdo
             j = rand()%getEnemyLibrarySize(el);
         }while(getEnemyFloor(getEnemyFromLibrary(el, j)) > floor); // only generate enemies from this or previous floors
         curr_enemy = copyEnemy(getEnemyFromLibrary(el, j)); // create a copy of the enemy
-        j = rand()%tiles;
-        j = arr[j]; // choose random tile to spawn enemy in
+        do{
+        k = rand()%tiles;
+        }while(arr[k] == -1);
+        j = arr[k]; // choose random tile to spawn enemy in
+        arr[k] = -1;
         new->room_enemies[i] = createEnemyPlus(curr_enemy, new->x + j%getRoomHeight(new->r), new->y + j/getRoomHeight(new->r));
     }
+
+    // Generate Merchant
+    if (getRoomPattern(new->r) == 0){ // merchant will only be able to spawn in empty rooms
+        k = rand()%2 + 1;
+        if (k >= 2){ // 50 chance of spawning on those rooms
+            new->merch = createMerchant(MERCHANT, 0);
+            if (new->merch == NULL)
+                return new;
+            do{
+                k = rand()%tiles;
+            }while(arr[k] == -1);
+            j = arr[k]; // choose random tile to spawn merchant in
+            arr[k] = -1;
+            setMerchantCoordinates(new->merch,  new->x + j%getRoomHeight(new->r), new->y + j/getRoomHeight(new->r)); // place merchant in a valid tile
+
+            k = rand()%2 + 1;
+            setType(new->merch, k);
+            if (k == POTIONS){ // potion
+                num = (rand()%3 + 1); // 1 - 3 potions
+                price = 90 + rand()%21; // 90-110G per potion
+                amount = num;
+                itm = NULL;
+            }
+            else if (k == WEAPONS){ // weapon
+                itm = searchWeaponbyFloor(wl, floor, 1);
+                price = (48 + rand()%25) * floor;
+                amount = 1;
+            }
+            setDeal(new->merch, itm, price, amount);
+        }
+    }
+
     deleteEmptyRoomTileArr(arr);
 
     return new;
@@ -276,21 +400,25 @@ void deleteChamber(roomp* rp){
             deleteEnemyPlus(rp->room_enemies[i]);
         free(rp->room_enemies);
     }
+    if (rp->merch != NULL)
+        deleteMerchant(rp->merch);
     free(rp);
 }
 
-roomp* createFirstChamber(int w, int h, int mw, int mh, int max_index){
-    return createChamber(w, h, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0);
+roomp* createFirstChamber(int w, int h, int mw, int mh, int max_index, weaponLibrary* wl){
+    return createChamber(w, h, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0, wl);
 }
 
 void maskChamber(roomp* rp, int offset_x){
     int i, j, ii = getRoomHeight(rp->r), jj = getRoomWidth(rp->r);
     gotoxy(2*rp->x - offset_x, rp->y);
+    printf("\033[1;30m");
     for (i = 0; i < ii; i++){
         for(j = 0; j < jj; j++)
             printf("%c ", WALL);
         gotoxy(2*rp->x - offset_x, rp->y + i + 1);
     }
+    printf("\033[0m");
 }
 
 void printEnemies(roomp* rp, int rpx){
@@ -306,6 +434,8 @@ void printEnemies(roomp* rp, int rpx){
 void printChamber(roomp* rp, player* p, int rpx){
     printRoom(rp->r, rp->x, rp->y, rpx, 0);
     printEnemies(rp, rpx);
+    if (rp->merch != NULL)
+        printMerchant(rp->merch, rpx, 0);
     printPlayer(p, rpx, 0);
     gotoxy(rp->x, rp->y);
 }
@@ -480,7 +610,7 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
 
 
     // Set First Chamber and Player position
-    rp = createFirstChamber(bw, bh, spawn_x - bw/2, spawn_y - bh/2, max_index);
+    rp = createFirstChamber(bw, bh, spawn_x - bw/2, spawn_y - bh/2, max_index, wl);
     push(s, rp);
     if (rp == NULL) return 0;
     setPlayerPos(p, spawn_x, spawn_y);
@@ -556,9 +686,9 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
 
                 exit_rnd = rand()%size;
                 if ((ndoors > 0 && exit_rnd < size - 1) || exit_flag == 1)
-                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0);
+                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0, wl);
                 else{
-                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1);
+                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1, wl);
                     exit_flag = 1;
                 }
                 chamberLink(rp, nrp, dir);
@@ -572,7 +702,7 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
             continue;
         }
         // Check for Player Interaction
-        playerInteract(p, rp, wl, action);
+        playerInteract(p, rp, wl, action, floor);
         // Enemy Movement and Interactions with Player
         outcome = enemyMove(p, rp);
         if (!outcome){ // Player Dies
@@ -614,8 +744,44 @@ roomp* createTreasureChamber(int w, int h, int x, int y, int fdoor, int floor){
     new->west = NULL;
     new->room_enemies = NULL;
     new->num_enemies = 0;
+    new->merch = NULL;
     
     return new;
+}
+
+void spawnExtraEnemies(roomp* rp, enemyLibrary* el, char* name, int amount){
+    int i, j, k, x, y, tiles = getEmptyRoomTiles(rp->r);
+    enemyp** tmp;
+    tmp = (enemyp**)realloc(rp->room_enemies, (amount + rp->num_enemies) * sizeof(enemyp*));
+    if (tmp == NULL)
+        return;
+    rp->room_enemies = tmp;
+    int *arr = getEmptyRoomTileArr(rp->r);
+    for (i = 0; i < amount; i++){
+        do{
+        k = rand()%tiles;
+        }while(arr[k] == -1);
+        j = arr[k]; // choose random tile to spawn enemy in
+        arr[k] = -1;
+        x = rp->x + j%getRoomHeight(rp->r);
+        y = rp->y + j/getRoomHeight(rp->r);
+        rp->room_enemies[rp->num_enemies + i] = createEnemyPlus(copyEnemy(getEnemyByNameFromLibrary(el, name)), x, y);
+    }
+    rp->num_enemies += amount;
+    deleteEmptyRoomTileArr(arr);
+}
+
+void triggerBossAbility(roomp* rp, enemyLibrary* el){
+    static int mega_slime_flag = 0;
+    if (rp->num_enemies == 0)
+        return;
+    enemy* boss = rp->room_enemies[0]->enm;
+
+    if (!strcmp(getEnemyName(boss), "Mega Slime") && !mega_slime_flag
+    && getEnemyHp(rp->room_enemies[0]->enm) < getEnemyMaxHp(rp->room_enemies[0]->enm)/2){ // spawns 4 slimes once, when hp goes below half
+        mega_slime_flag = 1;
+        spawnExtraEnemies(rp, el, "Slime", 4);
+    }
 }
 
 roomp* createBossChamber(int w, int h, int x, int y, int floor, enemyLibrary* el){
@@ -635,6 +801,7 @@ roomp* createBossChamber(int w, int h, int x, int y, int floor, enemyLibrary* el
     new->west = NULL;
     new->room_enemies = NULL;
     new->num_enemies = 0;
+    new->merch = NULL;
 
     if (el == NULL)
         return new;
@@ -655,14 +822,15 @@ int exploreBossFloor(player* p, int sw, int sh, int bw, int bh, int px, int py, 
     roomp* rp, *nrp;
     Stack* s = createStack(2);
     rp = createBossChamber(bw, 2*bh, px - bw/2, py - bh/4, floor, el);
+    setRoomDoor(rp->r, NORTH);
 
 if (rp == NULL) return 0;
     push(s, rp);
     setPlayerPos(p, px, py + 3*bh/2);
 
-    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd;
+    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd, boss_flag = 0;
 
-    while (getRoomTile(rp->r, getPlayerX(p) - rp->x, getPlayerY(p) - rp->y) != EXIT){gotoxy(2,2);printf("%d %d\n",getPlayerX(p) - rp->x, getPlayerY(p) - rp->y);
+    while (getRoomTile(rp->r, getPlayerX(p) - rp->x, getPlayerY(p) - rp->y) != EXIT){
         // Print Chamber and Player
         printChamber(rp, p, xx);
         // Player Action
@@ -700,7 +868,7 @@ if (rp == NULL) return 0;
             continue;
         }
         // Check for Player Interaction
-        playerInteract(p, rp, wl, action);
+        playerInteract(p, rp, wl, action, floor);
         // Enemy Movement and Interactions with Player
         outcome = enemyMove(p, rp);
         if (!outcome){ // Player Dies
@@ -710,6 +878,11 @@ if (rp == NULL) return 0;
             }
             deleteStack(s);
             return 0;
+        }
+        triggerBossAbility(rp, el);
+        if(roomHasNoEnemies(rp) && !boss_flag){
+            openRoomDoor(rp->r, NORTH);
+            boss_flag = 1;
         }
 
     }

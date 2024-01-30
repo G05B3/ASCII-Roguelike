@@ -7,10 +7,10 @@ LDIR =../lib
 
 LIBS=-lm
 
-_DEPS = roomGen.h tiles.h stack.h defs.h item.h dungeon.h player.h enemy.h
+_DEPS = roomGen.h tiles.h stack.h defs.h item.h dungeon.h player.h enemy.h merchant.h
 DEPS = $(patsubst %,$(IDIR)/%,$(_DEPS))
 
-_OBJ = roomGen.o stack.o main.o dungeon.o player.o defs.o enemy.o
+_OBJ = roomGen.o stack.o main.o dungeon.o player.o defs.o enemy.o merchant.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 

@@ -7,6 +7,7 @@ typedef struct _weaponLibrary weaponLibrary;
 
 player* initPlayer();
 void deletePlayer(player *p);
+void resetPlayer(player* p);
 void setPlayerPos(player* p, int x, int y);
 void setPlayerChr(player* p, int chr);
 void setPlayerDispCoordinates(player* p, int x, int y);
@@ -51,5 +52,6 @@ void deleteWeaponLibrary(weaponLibrary* wl);
 weapon* getWeaponFromLibrary(weaponLibrary* wl, int index);
 int getWeaponLibrarySize(weaponLibrary* wl);
 weapon* searchWeaponbyFloor(weaponLibrary* wl, int floor, int high_low);
+int searchWeaponIndexbyFloor(weaponLibrary* wl, int floor, int high_low);
 
 #endif

@@ -4,7 +4,7 @@
 #include "tiles.h"
 #include "defs.h"
 
-#define TOTALNUMPATTERNS 5
+#define TOTALNUMPATTERNS 8
 
 struct _room{
     int** mat; // layout matrix - walls, floors, chests, gold, ...
@@ -317,6 +317,44 @@ void roomPatternGen(room* r, int forcepattern){
             r->mat[r->height/2 - 1][r->width/2] = WALL;
             r->mat[r->height/2][r->width/2 + 1] = WALL;
             r->mat[r->height/2][r->width/2 - 1] = WALL;
+        }
+        return;
+    }
+    if (pattern == 5){
+        if (r->height > 6 && r->width > 6){
+            r->mat[1][1] = WALL;
+            r->mat[1][r->width - 2] = WALL;
+            r->mat[r->height - 2][1] = WALL;
+            r->mat[r->height - 2][r->width - 2] = WALL;
+            r->mat[r->height/2][r->width/2] = WALL;
+            r->mat[r->height/2 - 1][r->width/2] = WALL;
+            r->mat[r->height/2 + 1][r->width/2] = WALL;
+            r->mat[r->height/2][r->width/2 + 1] = WALL;
+            r->mat[r->height/2][r->width/2 - 1] = WALL;
+            if (r->height > 8 && r->width > 8){
+                r->mat[r->height/2 + 1][r->width/2 + 1] = WALL;
+                r->mat[r->height/2 + 1][r->width/2 - 1] = WALL;
+                r->mat[r->height/2 - 1][r->width/2 + 1] = WALL;
+                r->mat[r->height/2 - 1][r->width/2 - 1] = WALL;
+            }
+        }
+        return;
+    }
+    if (pattern == 6){
+        if (r->height > 6 && r->width > 6){
+            for (i = 2; i < r->height - 2; i+=2){
+                for (j = 2; j < r->width - 2; j++)
+                    r->mat[i][j] = WALL;
+            }
+        }
+        return;
+    }
+    if (pattern == 7){
+        if (r->height > 6 && r->width > 6){
+            for (i = 2; i < r->width - 2; i+=2){
+                for (j = 2; j < r->height - 2; j++)
+                    r->mat[j][i] = WALL;
+            }
         }
         return;
     }

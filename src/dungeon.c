@@ -23,6 +23,7 @@ struct _roomp{
     room* r;
     int x;
     int y;
+    int real_x;
     roomp* north;
     roomp* east;
     roomp* south;
@@ -301,17 +302,17 @@ int shouldChangeRoom(player* p, roomp* rp, int mov){
     return 0;
 }
 
-roomp* createChamber(int w, int h, int sw, int sh, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe, weaponLibrary* wl){
+roomp* createChamber(int w, int h, int sw, int sh, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe, weaponLibrary* wl, int xx){
 
     // Create the room
-    int bd[4] = {0,0,0,0}, i;
+    int bd[4] = {0,0,0,0}, i, real_x = 2*x - xx;
     if (bdoors != NULL){
         for (i = 0; i < 4; i++)
             bd[i] = bdoors[i];
     }
-    if (x < w + 2)
+    if (real_x < w + 2)
         bd[WEST - 1] = 1;
-    else if (x/2 > sw/2 + 2 - 2*w)
+    else if (real_x > sw + 2 - 2*w)
         bd[EAST - 1] = 1;
     if (y < h + 2)
         bd[NORTH - 1] = 1;
@@ -420,7 +421,7 @@ void deleteChamber(roomp* rp){
 }
 
 roomp* createFirstChamber(int w, int h, int sw, int sh, int mw, int mh, int max_index, weaponLibrary* wl){
-    return createChamber(w, h, sw, sh, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0, wl);
+    return createChamber(w, h, sw, sh, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0, wl, mw);
 }
 
 void maskChamber(roomp* rp, int offset_x){
@@ -540,28 +541,32 @@ int enemyMove(player* p, roomp* rp){
         for (j = 0; j < 4; j++){
             // Check if movement is south and is a possible movement
             if (priority_arr[j] == SOUTH && getRoomTile(rp->r, target_x, target_y + 1) == FLOOR
-            && noEnemyInTile(rp, target_x + rp->x, target_y + 1 + rp->y)){
+            && noEnemyInTile(rp, target_x + rp->x, target_y + 1 + rp->y)
+            && noMerchInTile(rp, target_x + rp->x, target_y + 1 + rp->y)){
                 choice = SOUTH;
                 if (target_x != px || target_y + 1 != py)
                     incrEnemyY(target);
                 break;
             }
             else if (priority_arr[j] == WEST && getRoomTile(rp->r, target_x - 1, target_y) == FLOOR
-            && noEnemyInTile(rp, target_x - 1 + rp->x, target_y + rp->y)){
+            && noEnemyInTile(rp, target_x - 1 + rp->x, target_y + rp->y)
+            && noMerchInTile(rp, target_x - 1 + rp->x, target_y + rp->y)){
                 choice = WEST;
                 if (target_x - 1 != px || target_y != py)
                     decrEnemyX(target);
                 break;
             }
             else if (priority_arr[j] == NORTH && getRoomTile(rp->r, target_x, target_y - 1) == FLOOR
-            && noEnemyInTile(rp, target_x + rp->x, target_y - 1 + rp->y)){
+            && noEnemyInTile(rp, target_x + rp->x, target_y - 1 + rp->y)
+            && noMerchInTile(rp, target_x + rp->x, target_y - 1 + rp->y)){
                 choice = NORTH;
                 if (target_x != px || target_y - 1 != py)
                     decrEnemyY(target);
                 break;
             }
             else if (priority_arr[j] == EAST && getRoomTile(rp->r, target_x + 1, target_y) == FLOOR
-            && noEnemyInTile(rp, target_x + 1 + rp->x, target_y + rp->y)){
+            && noEnemyInTile(rp, target_x + 1 + rp->x, target_y + rp->y)
+            && noMerchInTile(rp, target_x + 1 + rp->x, target_y + rp->y)){
                 choice = EAST;
                 if (target_x + 1 != px || target_y != py)
                     incrEnemyX(target);
@@ -700,9 +705,9 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
 
                 exit_rnd = rand()%size;
                 if ((ndoors > 0 && exit_rnd < size - 1) || exit_flag == 1)
-                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0, wl);
+                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0, wl, xx);
                 else{
-                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1, wl);
+                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1, wl, xx);
                     exit_flag = 1;
                 }
                 chamberLink(rp, nrp, dir);
@@ -713,7 +718,6 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
                 rp = nrp;
             }
             respawnEnemies(rp);
-                   gotoxy(1,1);printf("x y: %d %d                     \n",rp->x, rp->y);
             continue;
         }
         // Check for Player Interaction
@@ -730,7 +734,6 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
         }
 
     }
-    gotoxy(1,1);printf("rpx rpy: %d %d\n",rp->x, rp->y);getch();
     fx = rp->x + bw/2;
     fy = rp->y + bh/2;
     // Free Dungeon
@@ -844,7 +847,7 @@ if (rp == NULL) return 0;
     push(s, rp);
     setPlayerPos(p, px, py + 3*bh/2);
 
-    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd, boss_flag = 0;
+    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd, boss_flag = 0, fx, fy;
 
     while (getRoomTile(rp->r, getPlayerX(p) - rp->x, getPlayerY(p) - rp->y) != EXIT){
         // Print Chamber and Player
@@ -903,13 +906,14 @@ if (rp == NULL) return 0;
 
     }
 
-
+    fx = rp->x + bw/2;
+    fy = rp->y + bh/2;
     // Free Dungeon
     while(!isEmpty(s)){
         deleteChamber(pop(s));
     }
     deleteStack(s);
-    return 1;
+    return fx * 1000 + fy;
 }
 
 

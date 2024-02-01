@@ -301,10 +301,24 @@ int shouldChangeRoom(player* p, roomp* rp, int mov){
     return 0;
 }
 
-roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe, weaponLibrary* wl){
+roomp* createChamber(int w, int h, int sw, int sh, int ndoors, int x, int y, int fdoor, int* bdoors, int fp, int max_index, int floor, enemyLibrary* el, int fe, weaponLibrary* wl){
 
     // Create the room
-    room *r = roomBuild(w, h, ndoors, fdoor, bdoors, fp, fe);
+    int bd[4] = {0,0,0,0}, i;
+    if (bdoors != NULL){
+        for (i = 0; i < 4; i++)
+            bd[i] = bdoors[i];
+    }
+    if (x < w + 2)
+        bd[WEST - 1] = 1;
+    else if (x/2 > sw/2 + 2 - 2*w)
+        bd[EAST - 1] = 1;
+    if (y < h + 2)
+        bd[NORTH - 1] = 1;
+    else if (y > sh + 2 - 2*h)
+        bd[SOUTH - 1] = 1;
+    //gotoxy(1,1);printf("X AND Y: %d %d |||| LOCKED: %d %d %d %d\n",x ,y, bd[0], bd[1], bd[2], bd[3]);
+    room *r = roomBuild(w, h, ndoors, fdoor, bd, fp, fe);
     roomTrsGen(r, 1, 2 * w * h, 3 * w + 3 * h, max_index);
     setGoldSpawn(r, 2, 3 * w * h, 2 * w + 2 * h);
     roomGoldGen(r);
@@ -327,7 +341,7 @@ roomp* createChamber(int w, int h, int ndoors, int x, int y, int fdoor, int* bdo
         return new;
 
     // Initialize Array of Enemies in the Room
-    int i, j, k, num, price, amount, size, tiles = getEmptyRoomTiles(new->r), *arr = getEmptyRoomTileArr(new->r);
+    int j, k, num, price, amount, size, tiles = getEmptyRoomTiles(new->r), *arr = getEmptyRoomTileArr(new->r);
     Item itm;
 
     size = rand()%200 + 1;
@@ -405,8 +419,8 @@ void deleteChamber(roomp* rp){
     free(rp);
 }
 
-roomp* createFirstChamber(int w, int h, int mw, int mh, int max_index, weaponLibrary* wl){
-    return createChamber(w, h, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0, wl);
+roomp* createFirstChamber(int w, int h, int sw, int sh, int mw, int mh, int max_index, weaponLibrary* wl){
+    return createChamber(w, h, sw, sh, 1, mw, mh, NONE, NULL, 0, max_index, 0, NULL, 0, wl);
 }
 
 void maskChamber(roomp* rp, int offset_x){
@@ -606,16 +620,16 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
 
     roomp* rp, *nrp;
     Stack* s = createStack(size);
-    int max_index = floor < getWeaponLibrarySize(wl) ? floor/2 : getWeaponLibrarySize(wl);
+    int max_index = searchWeaponIndexbyFloor(wl, floor, 0);
 
 
     // Set First Chamber and Player position
-    rp = createFirstChamber(bw, bh, spawn_x - bw/2, spawn_y - bh/2, max_index, wl);
+    rp = createFirstChamber(bw, bh, sw, sh, spawn_x - bw/2, spawn_y - bh/2, max_index, wl);
     push(s, rp);
     if (rp == NULL) return 0;
     setPlayerPos(p, spawn_x, spawn_y);
 
-    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd;
+    int action = 0, rnd, nx = 0, ny = 0, dir = 0, xx = rp->x, outcome, exit_flag = 0, exit_rnd, fx, fy;
     int bdoors[4] = {0,0,0,0};
     int ndoors = size - 2;
 
@@ -686,9 +700,9 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
 
                 exit_rnd = rand()%size;
                 if ((ndoors > 0 && exit_rnd < size - 1) || exit_flag == 1)
-                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0, wl);
+                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 0, wl);
                 else{
-                    nrp = createChamber(bw, bh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1, wl);
+                    nrp = createChamber(bw, bh, sw, sh, rnd, nx, ny, dir, bdoors, -1, max_index, floor, el, 1, wl);
                     exit_flag = 1;
                 }
                 chamberLink(rp, nrp, dir);
@@ -699,6 +713,7 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
                 rp = nrp;
             }
             respawnEnemies(rp);
+                   gotoxy(1,1);printf("x y: %d %d                     \n",rp->x, rp->y);
             continue;
         }
         // Check for Player Interaction
@@ -715,14 +730,15 @@ int exploreFloor(player* p, int sw, int sh, int bw, int bh, int spawn_x, int spa
         }
 
     }
-
-
+    gotoxy(1,1);printf("rpx rpy: %d %d\n",rp->x, rp->y);getch();
+    fx = rp->x + bw/2;
+    fy = rp->y + bh/2;
     // Free Dungeon
     while(!isEmpty(s)){
         deleteChamber(pop(s));
     }
     deleteStack(s);
-    return 1;
+    return fx * 1000 + fy;
 }
 
 roomp* createTreasureChamber(int w, int h, int x, int y, int fdoor, int floor){
@@ -905,17 +921,52 @@ int isBossFloor(int* bf, int sz, int floor){
     return 0;
 }
 
+void dungeonOutline(){
+    int i;
+    gotoxy(2,2);
+    printf("╔");
+    for (i = 0; i < 200; i++){
+        printf("═");
+    }
+    printf("╗");
+    for (i = 0; i < 45; i++){
+        gotoxy(2, 3 + i);
+        printf("║");
+        gotoxy(160, 3 + i);
+        printf("║");
+        gotoxy(203, 3 + i);
+        printf("║");
+    }
+    gotoxy(2,48);
+    printf("╚");
+    for (i = 0; i < 200; i++){
+        printf("═");
+    }
+    printf("╝");
+    gotoxy(160, 2);
+    printf("╦");
+    gotoxy(160,48);
+    printf("╩");
+}
+
 void exploreDungeon(player* p, weaponLibrary* wl, enemyLibrary* el, int sw, int sh, int bw, int bh, int nfloors){
     int floor = 0, px, py, outcome, size;
     int *boss_floors = getBossRoomFloors(el);
 
     while(floor < nfloors){
         if (!isBossFloor(boss_floors, getNumBosses(el), floor + 1)){ // Normal Floor
-            px = floor == 0 ? sw/2 + bw/2 : getPlayerX(p);
-            py = floor == 0 ? sh/2 + bh/2 : getPlayerY(p);
+            if (floor == 0){
+                px = 8 + (rand()%13) * bw;
+                py = 8 + (rand()%3) * bh;
+            }
+            else{
+                px = outcome/1000;
+                py = outcome%1000;
+            }
             size = 5 + 5 * floor;
             setPlayerFloor(p, ++floor);
             clrscr();
+            dungeonOutline();
             p_display(p);
             outcome = exploreFloor(p, sw, sh, bw, bh, px, py, size, wl, floor, el);
             if (!outcome){ // you die
@@ -928,6 +979,7 @@ void exploreDungeon(player* p, weaponLibrary* wl, enemyLibrary* el, int sw, int 
             py = sh/2 + bh/2;
             setPlayerFloor(p, ++floor);
             clrscr();
+            dungeonOutline();
             p_display(p);
             outcome = exploreBossFloor(p, sw, sh, bw, bh, px, py, wl, floor, el);
             if (!outcome){ // you die

@@ -82,6 +82,19 @@ void deletePlayer(player *p){
     free(p);
 }
 
+void resetPlayer(player* p){
+    p->hp = DEFAULTHP;
+    p->max_hp = DEFAULTHP;
+    p->base_atk = DEFAULTATK;
+    p->atk = DEFAULTATK;
+    p->potions = 0;
+    p->level = 1;
+    p->exp = 0;
+    p->gld = DEFAULTGLD;
+    p->wep = NULL;
+    p->floor = 0;
+}
+
 void setPlayerPos(player* p, int x, int y){
     p->x = x;
     p->y = y;
@@ -469,23 +482,38 @@ char* getWeaponName(weapon* w){
 
 weaponLibrary* getDefaultWeaponLibrary(){
     weaponLibrary* weapon_arr = (weaponLibrary*)malloc(sizeof(weaponLibrary));
-    weapon_arr->nweapons = 5; // array of 5 weapons
+    weapon_arr->nweapons = 10; // array of 10 weapons
     weapon_arr->weapons = (weapon**)malloc(weapon_arr->nweapons * sizeof(weapon*));
 
     // Weapon[0]
     weapon_arr->weapons[0] = createWeapon("Sturdy Stick", 3, 1);
 
     // Weapon[1]
-    weapon_arr->weapons[1] = createWeapon("Wood Sword", 5, 2);
+    weapon_arr->weapons[1] = createWeapon("Wood Sword", 5, 3);
 
     // Weapon[2]
-    weapon_arr->weapons[2] = createWeapon("Jagged Blade", 12, 4);
+    weapon_arr->weapons[2] = createWeapon("Rusty Knife", 10, 5);
 
-    // Weapon[3]
-    weapon_arr->weapons[3] = createWeapon("Paladin's Sword", 25, 6);
+    //Weapon[3]
+    weapon_arr->weapons[3] = createWeapon("Cleaver", 19, 7);
 
-    // Weapon[4]
-    weapon_arr->weapons[4] = createWeapon("Dual Great Blades", 40, 8);
+    //Weapon[4]
+    weapon_arr->weapons[4] = createWeapon("Scimitar", 29, 9);
+
+    //Weapon[5]
+    weapon_arr->weapons[5] = createWeapon("Iron Axe", 34, 12);
+
+    //Weapon[6]
+    weapon_arr->weapons[6] = createWeapon("Morning Star", 41, 14);
+
+    //Weapon[7]
+    weapon_arr->weapons[7] = createWeapon("Jagged Blade", 50, 16);
+
+    // Weapon[8]
+    weapon_arr->weapons[8] = createWeapon("Paladin's Sword", 65, 18);
+
+    // Weapon[9]
+    weapon_arr->weapons[9] = createWeapon("Dual Great Blades", 90, 19);
 
     return weapon_arr;
 }
@@ -513,9 +541,34 @@ int getWeaponLibrarySize(weaponLibrary* wl){
 
 weapon* searchWeaponbyFloor(weaponLibrary* wl, int floor, int high_low){
     int i;
-    for (i = 0; i < wl->nweapons; i++){
-        if (wl->weapons[i]->floor <= floor && high_low == 0 || wl->weapons[i]->floor >= floor && high_low == 1)
+    if (high_low == 1){
+        for (i = 0; i < wl->nweapons; i++){
+        if (wl->weapons[i]->floor >= floor)
             return wl->weapons[i];
+        }
+    }
+    else if (!high_low){
+        for (i = wl->nweapons - 1; i >= 0; i--){
+        if (wl->weapons[i]->floor <= floor)
+            return wl->weapons[i];
+        }
     }
     return NULL;
+}
+
+int searchWeaponIndexbyFloor(weaponLibrary* wl, int floor, int high_low){
+        int i;
+    if (high_low == 1){
+        for (i = 0; i < wl->nweapons; i++){
+        if (wl->weapons[i]->floor >= floor)
+            return i;
+        }
+    }
+    else if (!high_low){
+        for (i = wl->nweapons - 1; i >= 0; i--){
+        if (wl->weapons[i]->floor <= floor)
+            return i;
+        }
+    }
+    return -1;
 }
